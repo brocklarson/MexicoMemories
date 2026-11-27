@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Our Memories</title>
+  <title>Mexico Memories</title>
   <meta name="description" content="Read and share memories from our events.">
 
   <!-- Apply the saved theme before first paint to avoid a light/dark flash. -->
@@ -27,7 +27,7 @@
     <button type="button" class="icon-btn menu-btn" id="menu-btn" aria-controls="sidebar" aria-expanded="false" aria-label="Open events list">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
     </button>
-    <a class="brand" href="#/">Our Memories</a>
+    <a class="brand" href="#/">Mexico Memories</a>
 
     <form class="search" id="search-form" role="search">
       <button type="button" class="icon-btn search-close" id="search-close" aria-label="Close search">
@@ -64,7 +64,6 @@
   <div class="layout">
     <nav class="sidebar" id="sidebar" aria-label="Events">
       <div class="sidebar-head">
-        <h2 class="sidebar-title">Events</h2>
         <div class="sidebar-tools">
           <button type="button" class="icon-btn tool-btn" id="add-event" aria-label="Add event" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
@@ -105,39 +104,42 @@
       <h2 id="event-dialog-title">Add event</h2>
 
       <div class="field">
-        <label for="event-name">Name</label>
+        <label class="required" for="event-name">Name</label>
         <input id="event-name" name="name" type="text" required maxlength="100" autocomplete="off">
       </div>
 
       <div class="field-row">
         <div class="field">
-          <label for="event-start">Start date</label>
+          <label class="required" for="event-start">Start date</label>
           <input id="event-start" name="start" type="date" required>
         </div>
         <div class="field">
-          <label for="event-end">End date</label>
+          <label class="required" for="event-end">End date</label>
           <input id="event-end" name="end" type="date" required>
         </div>
+      </div>
+      
+      <div class="field">
+        <label for="event-family">Family</label>
+        <input id="event-family" name="family" type="text" maxlength="200" autocomplete="off">
       </div>
 
       <div class="field">
         <label for="event-album">Photo album link</label>
         <input id="event-album" name="album" type="url" placeholder="https://" autocomplete="off">
-        <p class="field-hint">Optional.</p>
       </div>
 
       <div class="field">
         <label for="event-coords">Map location</label>
         <input id="event-coords" name="coords" type="text" placeholder="39.7392, -104.9903" autocomplete="off">
-        <p class="field-hint">Optional. In Google Maps, right-click a spot and click the numbers at the top of the menu to copy them.</p>
       </div>
 
       <div class="field">
         <label for="event-place">Place name</label>
         <input id="event-place" name="place" type="text" maxlength="100" autocomplete="off">
-        <p class="field-hint">Optional. Shown instead of the coordinates.</p>
       </div>
 
+      <p class="form-note"><span class="req" aria-hidden="true">*</span> Required</p>
       <p class="form-error" id="event-error" role="alert"></p>
       <div class="dialog-actions">
         <button type="button" class="btn ghost" id="event-cancel">Cancel</button>

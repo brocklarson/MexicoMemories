@@ -31,6 +31,7 @@ function renderHeader(event, onEditEvent) {
       el('h1', { class: 'event-title', text: event.name }),
       onEditEvent && el('button', { type: 'button', class: 'btn ghost', onclick: onEditEvent }, icon('edit'), 'Edit event'),
     ),
+    event.family && el('p', { class: 'event-family', text: event.family }),
     el('p', { class: 'event-dates', text: formatDateRange(event.startDate, event.endDate) }),
     el('ul', { class: 'event-links' },
       mapHref && el('li', {}, externalLink(mapHref, 'pin', locationLabel(event.location))),

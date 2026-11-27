@@ -15,7 +15,7 @@ import { slugify } from './util.js';
 
 export const MAX_MEMORY_LENGTH = 1000; // keep in sync with supabase/01-schema.sql
 
-const EVENT_COLUMNS = 'id, name, start_date, end_date, album_url, location_label, lat, lng';
+const EVENT_COLUMNS = 'id, name, family, start_date, end_date, album_url, location_label, lat, lng';
 const MEMORY_COLUMNS = 'id, event_id, body, created_at, author:profiles(display_name)';
 
 function unwrap({ data, error }) {
@@ -27,6 +27,7 @@ function toEvent(row) {
   return {
     id: row.id,
     name: row.name,
+    family: row.family,
     startDate: row.start_date,
     endDate: row.end_date,
     albumUrl: row.album_url,
@@ -86,10 +87,11 @@ export async function getEvent(id) {
 
 // ---- Events (only the admin can change these; the database enforces it) ----
 
-// `fields` is { name, startDate, endDate, albumUrl|null, location: { label|null, lat, lng } | null }
+// `fields` is { name, family|null, startDate, endDate, albumUrl|null, location: { label|null, lat, lng } | null }
 function eventRow(fields) {
   return {
     name: fields.name,
+    family: fields.family,
     start_date: fields.startDate,
     end_date: fields.endDate,
     album_url: fields.albumUrl,

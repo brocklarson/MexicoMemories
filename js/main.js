@@ -24,7 +24,7 @@ import { initEventDialog, openEventDialog } from './eventDialog.js';
 import { initSearch, resetSearch, MIN_QUERY_LENGTH } from './search.js';
 import { el, searchTerms } from './util.js';
 
-const APP_NAME = 'Our Memories';
+const APP_NAME = 'Mexico Memories';
 const ACCOUNT_HASH = '#/account';
 const main = document.getElementById('main');
 const searchStatus = document.getElementById('search-status'); // read aloud by screen readers

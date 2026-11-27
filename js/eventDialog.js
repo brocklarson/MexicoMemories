@@ -7,6 +7,7 @@ const dialog = document.getElementById('event-dialog');
 const form = document.getElementById('event-form');
 const title = document.getElementById('event-dialog-title');
 const nameInput = document.getElementById('event-name');
+const family = document.getElementById('event-family');
 const start = document.getElementById('event-start');
 const end = document.getElementById('event-end');
 const album = document.getElementById('event-album');
@@ -41,6 +42,7 @@ export function openEventDialog({ event = null, onSaved }) {
 
   if (event) {
     nameInput.value = event.name;
+    family.value = event.family ?? '';
     start.value = event.startDate;
     end.value = event.endDate;
     album.value = event.albumUrl ?? '';
@@ -69,6 +71,7 @@ function readFields() {
 
   return {
     name: nameInput.value.trim(),
+    family: family.value.trim() || null,
     startDate: start.value,
     endDate: end.value,
     albumUrl: album.value.trim() || null,

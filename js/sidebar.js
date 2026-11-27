@@ -39,6 +39,7 @@ export function renderEventList(events, activeId) {
           'aria-current': event.id === activeId ? 'page' : null,
         },
           el('span', { class: 'event-link-name', text: event.name }),
+          event.family && el('span', { class: 'event-link-family', text: event.family }),
           el('span', { class: 'event-link-date', text: formatDateRange(event.startDate, event.endDate) }),
         ),
       ),

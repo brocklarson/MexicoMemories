@@ -22,6 +22,7 @@ create table public.profiles (
 create table public.events (
   id             text primary key check (id ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
   name           text not null check (char_length(btrim(name)) between 1 and 100),
+  family         text check (char_length(family) <= 200),
   start_date     date not null,
   end_date       date not null,
   album_url      text check (album_url is null or album_url ~* '^https?://'),
