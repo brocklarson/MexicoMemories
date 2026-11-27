@@ -1,0 +1,86 @@
+// Small shared helpers. No app logic lives here.
+
+/**
+ * Build a DOM element. Text is always inserted as text (never as HTML),
+ * so user-written content can't inject markup.
+ *
+ * el('a', { href: '#', class: 'link' }, 'Label', otherNode)
+ * Props: `class`, `text`, `onclick`-style handlers, or any attribute.
+ * null / undefined / false props and children are skipped.
+ */
+export function el(tag, props = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(props)) {
+    if (value == null || value === false) continue;
+    if (key === 'class') node.className = value;
+    else if (key === 'text') node.textContent = value;
+    else if (key.startsWith('on')) node.addEventListener(key.slice(2).toLowerCase(), value);
+    else node.setAttribute(key, value === true ? '' : value);
+  }
+  for (const child of children.flat()) {
+    if (child == null || child === false) continue;
+    node.append(child);
+  }
+  return node;
+}
+
+// Event dates are plain calendar dates ("2026-06-13"), so format them in UTC
+// to keep them from shifting a day in some time zones.
+const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeZone: 'UTC' });
+
+export function formatDate(isoDate) {
+  return dateFormat.format(new Date(isoDate));
+}
+
+export function formatDateRange(start, end) {
+  if (!end || end === start) return formatDate(start);
+  return dateFormat.formatRange(new Date(start), new Date(end));
+}
+
+// Opens Google Maps with a pin at the coordinates. Returns null if they're missing.
+export function mapsUrl(location) {
+  if (!location || !Number.isFinite(location.lat) || !Number.isFinite(location.lng)) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}`;
+}
+
+// A pin dropped on a map has no place name, so fall back to its coordinates.
+export function locationLabel({ label, lat, lng }) {
+  return label?.trim() || `Pin at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+}
+
+/** Split a search query into lowercase words. A memory must contain every word to match. */
+export function searchTerms(query) {
+  return [...new Set(query.toLowerCase().split(/\s+/).filter(Boolean))];
+}
+
+/** Returns text split into strings and <mark> elements, ready to pass to el() as children. */
+export function highlight(text, terms) {
+  if (!terms.length) return [text];
+  const pattern = terms
+    .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .sort((a, b) => b.length - a.length)
+    .join('|');
+  // With a capture group, split() puts the matches at the odd positions.
+  return text
+    .split(new RegExp(`(${pattern})`, 'gi'))
+    .map((part, i) => (i % 2 ? el('mark', { text: part }) : part));
+}
+
+// Only allow http(s) links so a stored "javascript:" URL can never be rendered as a link.
+export function safeUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+let toastTimer;
+export function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+}
