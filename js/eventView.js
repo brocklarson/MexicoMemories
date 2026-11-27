@@ -8,9 +8,10 @@ import { icon } from './icons.js';
 const DELETED_AUTHOR = '[deleted]';
 const PREVIEW_NOTICE = 'Edit and deletion requests are coming soon.';
 
-export function renderEventView(event, memories, { onAddMemory }) {
+/** onEditEvent is only passed for the admin; without it there is no Edit button. */
+export function renderEventView(event, memories, { onAddMemory, onEditEvent }) {
   return el('article', { class: 'event' },
-    renderHeader(event),
+    renderHeader(event, onEditEvent),
     renderMemories(memories, onAddMemory),
   );
 }
@@ -22,11 +23,14 @@ export function renderMessage(title, body) {
   );
 }
 
-function renderHeader(event) {
+function renderHeader(event, onEditEvent) {
   const albumUrl = safeUrl(event.albumUrl);
   const mapHref = mapsUrl(event.location);
   return el('header', { class: 'event-head' },
-    el('h1', { class: 'event-title', text: event.name }),
+    el('div', { class: 'event-head-top' },
+      el('h1', { class: 'event-title', text: event.name }),
+      onEditEvent && el('button', { type: 'button', class: 'btn ghost', onclick: onEditEvent }, icon('edit'), 'Edit event'),
+    ),
     el('p', { class: 'event-dates', text: formatDateRange(event.startDate, event.endDate) }),
     el('ul', { class: 'event-links' },
       mapHref && el('li', {}, externalLink(mapHref, 'pin', locationLabel(event.location))),

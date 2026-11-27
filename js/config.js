@@ -7,4 +7,4 @@
 // Find the key in Supabase: Project Settings -> API Keys.
 
 export const SUPABASE_URL = 'https://kehhethrpsbmelcmuvtc.supabase.co';
-export const SUPABASE_KEY = 'sb_publishable_XnXZWw_JwLflzhXJximT5g_4kWEDKjd';
+export const SUPABASE_KEY = 'PASTE-YOUR-PUBLISHABLE-KEY-HERE';

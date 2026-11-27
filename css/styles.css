@@ -231,6 +231,15 @@ main:focus { outline: none; }
   border-bottom: 1px solid var(--line);
 }
 
+.event-head-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+.event-head-top .event-title { min-width: 0; }
+
 .event-title {
   font-family: var(--font-text);
   font-size: clamp(2.25rem, 1.4rem + 3.6vw, 3.75rem);
@@ -340,7 +349,8 @@ main:focus { outline: none; }
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.14);
 }
 
-.menu-list button {
+.menu-list button,
+.menu-list a {
   display: block;
   width: 100%;
   padding: 0.55rem 0.75rem;
@@ -348,8 +358,10 @@ main:focus { outline: none; }
   border-radius: 0.5rem;
   background: transparent;
   text-align: left;
+  text-decoration: none;
 }
-.menu-list button:hover { background: var(--accent-soft); }
+.menu-list button:hover,
+.menu-list a:hover { background: var(--accent-soft); }
 
 /* ==========================================================================
    Add-memory dialog + toast
@@ -551,14 +563,16 @@ mark {
 }
 .sidebar-head .sidebar-title { padding-bottom: 0; }
 
-.filter-toggle {
+.sidebar-tools { display: flex; gap: 0.125rem; }
+
+.tool-btn {
   position: relative;
   width: 2rem;
   height: 2rem;
   color: var(--muted);
 }
-.filter-toggle svg { width: 1.125rem; height: 1.125rem; }
-.filter-toggle[aria-expanded="true"] { background: var(--accent-soft); color: var(--ink); }
+.tool-btn svg { width: 1.125rem; height: 1.125rem; }
+.tool-btn[aria-expanded="true"] { background: var(--accent-soft); color: var(--ink); }
 
 /* Count of hidden events, shown only when something is hidden. */
 .filter-badge {
@@ -676,6 +690,36 @@ body:not([data-state="signed-in"]) .layout { grid-template-columns: minmax(0, 1f
 
 .auth-switch { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 1.25rem; }
 .auth-switch .link-btn { margin: 0; }
+
+/* Account page */
+.account { max-width: 36rem; }
+
+.account-title {
+  font-family: var(--font-text);
+  font-size: clamp(2rem, 1.4rem + 2.4vw, 2.75rem);
+  font-weight: 500;
+  line-height: 1.1;
+}
+.account-email { margin: 0.5rem 0 1.5rem; color: var(--muted); overflow-wrap: anywhere; }
+
+.account-section {
+  padding: clamp(1rem, 4vw, 1.5rem);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.account-section + .account-section { margin-top: 1rem; }
+.account-section h2 { margin-bottom: 1rem; font-size: 1.125rem; font-weight: 600; }
+.account-intro { margin: -0.5rem 0 1rem; color: var(--muted); }
+.account .auth-form .btn { width: auto; justify-self: start; }
+
+.btn.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn.danger:hover { background: var(--danger); color: var(--bg); }
+
+/* Add / edit event dialog */
+.event-form { display: grid; gap: 1rem; }
+.field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 1rem; }
+.event-form .dialog-actions { margin-top: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }

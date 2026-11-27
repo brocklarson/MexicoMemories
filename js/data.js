@@ -11,6 +11,7 @@
 // The checks here only give friendlier messages before a request is sent.
 
 import { supabase } from './supabase.js';
+import { slugify } from './util.js';
 
 export const MAX_MEMORY_LENGTH = 1000; // keep in sync with supabase/01-schema.sql
 
@@ -51,6 +52,24 @@ export async function getMyProfile(userId) {
   return { displayName: row.display_name, isAdmin: row.is_admin };
 }
 
+/**
+ * Change your own display name. Memories show the author's current name, so every
+ * memory you've added updates too. Returns the saved name.
+ */
+export async function updateMyDisplayName(userId, name) {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error('Enter a display name.');
+  if (trimmed.length > 40) throw new Error('Display names can be up to 40 characters.');
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ display_name: trimmed })
+    .eq('id', userId)
+    .select('display_name');
+  if (error || !data?.length) throw new Error('Couldn’t update your display name. Try again.');
+  return data[0].display_name;
+}
+
 /** All events, newest first. */
 export async function getEvents() {
   const rows = unwrap(
@@ -63,6 +82,56 @@ export async function getEvents() {
 export async function getEvent(id) {
   const row = unwrap(await supabase.from('events').select(EVENT_COLUMNS).eq('id', id).maybeSingle());
   return row ? toEvent(row) : null;
+}
+
+// ---- Events (only the admin can change these; the database enforces it) ----
+
+// `fields` is { name, startDate, endDate, albumUrl|null, location: { label|null, lat, lng } | null }
+function eventRow(fields) {
+  return {
+    name: fields.name,
+    start_date: fields.startDate,
+    end_date: fields.endDate,
+    album_url: fields.albumUrl,
+    location_label: fields.location?.label ?? null,
+    lat: fields.location?.lat ?? null,
+    lng: fields.location?.lng ?? null,
+  };
+}
+
+function eventError(error) {
+  if (error.code === '42501') return new Error('Only the admin can add or edit events.');
+  if (error.code === '23505') return new Error('An event with this name already exists.');
+  if (error.code === '23514') return new Error('Check the name, dates, link and coordinates, then try again.');
+  return new Error('Couldn’t save the event. Try again.');
+}
+
+/** Add an event. Its page address comes from the name. Returns the new event's id. */
+export async function createEvent(fields) {
+  const base = slugify(fields.name);
+  if (!base) throw new Error('Use some letters or numbers in the event name.');
+
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    const id = attempt === 1 ? base : `${base}-${attempt}`;
+    const { error } = await supabase.from('events').insert({ id, ...eventRow(fields) });
+    if (!error) return id;
+    // Two different names can make the same address. Try -2, -3, ... for that case only.
+    if (!(error.code === '23505' && error.message.includes('events_pkey'))) throw eventError(error);
+  }
+  throw new Error('Couldn’t find a free page address for this event. Try a different name.');
+}
+
+/** Save changes to an event. The id (page address) never changes. Returns the id. */
+export async function updateEvent(id, fields) {
+  const { data, error } = await supabase
+    .from('events')
+    .update(eventRow(fields))
+    .eq('id', id)
+    .select('id');
+  if (error) throw eventError(error);
+  // Without permission the database changes nothing and reports no error.
+  if (!data.length) throw new Error('Only the admin can add or edit events.');
+  return id;
 }
 
 /** Memories for an event, newest first. */

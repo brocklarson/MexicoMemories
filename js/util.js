@@ -43,9 +43,30 @@ export function mapsUrl(location) {
   return `https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}`;
 }
 
-// A pin dropped on a map has no place name, so fall back to its coordinates.
+// A pin dropped on a map has no place name, so show its coordinates instead.
 export function locationLabel({ label, lat, lng }) {
-  return label?.trim() || `Pin at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  return label?.trim() || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+}
+
+/** Reads "39.7392, -104.9903" (as copied from Google Maps). Returns { lat, lng } or null. */
+export function parseCoordinates(text) {
+  const match = text.trim().match(/^(-?\d+(?:\.\d+)?)\s*[,\s]\s*(-?\d+(?:\.\d+)?)$/);
+  if (!match) return null;
+  const lat = Number(match[1]);
+  const lng = Number(match[2]);
+  return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 ? { lat, lng } : null;
+}
+
+/** "Maya & Theo's Wedding" -> "maya-theo-s-wedding": the short name used in the page address. */
+export function slugify(text) {
+  return text
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+    .replace(/-+$/, '');
 }
 
 /** Split a search query into lowercase words. A memory must contain every word to match. */

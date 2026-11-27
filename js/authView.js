@@ -3,6 +3,7 @@
 // main.js hears about it from Supabase and loads the site.
 
 import { el } from './util.js';
+import { field, buildForm, onSubmit } from './forms.js';
 import { signIn, signUp, requestPasswordReset, updatePassword } from './auth.js';
 
 const TITLES = {
@@ -110,46 +111,10 @@ function resetForm({ onPasswordUpdated }) {
 
 // ---- Small builders ------------------------------------------------------
 
-function field(name, label, { hint, ...attrs }) {
-  const id = `auth-${name}`;
-  return el('div', { class: 'field' },
-    el('label', { for: id, text: label }),
-    el('input', { id, name, ...attrs }),
-    hint && el('p', { class: 'field-hint', text: hint }),
-  );
-}
-
-function buildForm(submitLabel, ...fields) {
-  return el('form', { class: 'auth-form' },
-    ...fields,
-    el('p', { class: 'form-error', role: 'alert' }),
-    el('button', { type: 'submit', class: 'btn primary', text: submitLabel }),
-  );
-}
-
 function linkButton(label, onclick) {
   return el('button', { type: 'button', class: 'link-btn', text: label, onclick });
 }
 
 function withLinks(form, ...links) {
   return el('div', {}, form, el('div', { class: 'auth-switch' }, ...links));
-}
-
-// Runs `action` on submit: disables the button, shows any error under the fields.
-function onSubmit(form, action) {
-  const button = form.querySelector('button[type="submit"]');
-  const error = form.querySelector('.form-error');
-
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    error.textContent = '';
-    button.disabled = true;
-    try {
-      await action(new FormData(form));
-    } catch (err) {
-      error.textContent = err.message;
-    } finally {
-      button.disabled = false;
-    }
-  });
 }

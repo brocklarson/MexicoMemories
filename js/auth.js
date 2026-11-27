@@ -13,6 +13,8 @@ const ERROR_MESSAGES = {
   weak_password: 'Choose a longer or less common password.',
   over_request_rate_limit: 'Too many attempts. Wait a few minutes and try again.',
   over_email_send_rate_limit: 'Too many emails sent. Wait a while and try again.',
+  same_password: 'Choose a password you haven’t used here before.',
+  reauthentication_needed: 'For security, sign out and sign in again, then change your password.',
 };
 
 function friendly(error, fallback = 'Something went wrong. Try again.') {
@@ -65,7 +67,25 @@ export async function requestPasswordReset(email) {
   if (error && (error.status === 429 || error.code?.startsWith('over_'))) throw new Error(friendly(error));
 }
 
-/** Sets a new password for the signed-in user (used after following a reset link). */
+/**
+ * Permanently deletes the signed-in person's account. Their memories stay (shown as
+ * "[deleted]"). Asks for the password again first, then signs them out.
+ */
+export async function deleteAccount({ email, password }) {
+  const check = await supabase.auth.signInWithPassword({ email, password });
+  if (check.error) {
+    throw new Error(check.error.code === 'invalid_credentials' ? 'That password is incorrect.' : friendly(check.error));
+  }
+
+  const { error } = await supabase.rpc('delete_my_account');
+  if (error) {
+    // P0001 is a message we wrote in the database (e.g. "you are the only admin").
+    throw new Error(error.code === 'P0001' ? error.message : 'Couldn’t delete the account. Try again.');
+  }
+  await supabase.auth.signOut();
+}
+
+/** Sets a new password for the signed-in user (used after a reset link and on the account page). */
 export async function updatePassword(password) {
   const { error } = await supabase.auth.updateUser({ password });
   if (error) throw new Error(friendly(error, 'Couldn’t update the password. Try again.'));

@@ -1,3 +1,5 @@
+-- Our Memories: database setup (run once in the Supabase SQL Editor)
+--
 -- Who can do what (members = signed-in users):
 --   Members read everything, add their own memories, and edit their own display name.
 --   Only the admin creates events and changes or deletes anything else.

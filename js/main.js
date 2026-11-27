@@ -1,16 +1,18 @@
 // Entry point. Decides what to show:
-//   signed out        -> the sign-in screens
+//   signed out          -> the sign-in screens
 //   opened a reset link -> "choose a new password"
-//   signed in         -> the site (events, memories, search)
+//   signed in           -> the site (events, memories, search, account page)
 //
-// The site uses hash routing (#/event/<id>) because GitHub Pages has no server routing.
-// Search isn't part of the URL. While a search is active it replaces the event view;
-// clearing the box (or picking an event) brings the event view back.
+// The site uses hash routing because GitHub Pages has no server routing:
+//   #/event/<id>  an event        #/account  the account page
+// Search isn't part of the URL. While a search is active it replaces the page;
+// clearing the box (or picking an event) brings the page back.
 
 import { getEvents, getEvent, getMemories, searchMemories, getMyProfile } from './data.js';
 import { isConfigured, linkType, linkError } from './supabase.js';
 import { onAuthChange, getSession, signOut } from './auth.js';
 import { showAuth } from './authView.js';
+import { renderAccount } from './accountView.js';
 import { initAccountMenu, setAccountName } from './accountMenu.js';
 import { initTheme } from './theme.js';
 import { initDrawer, closeDrawer, initEventFilter, renderEventList, eventHash } from './sidebar.js';
@@ -18,25 +20,31 @@ import { isHidden } from './hiddenEvents.js';
 import { renderEventView, renderMessage } from './eventView.js';
 import { renderSearchResults } from './searchView.js';
 import { initMemoryDialog, openMemoryDialog } from './memoryDialog.js';
+import { initEventDialog, openEventDialog } from './eventDialog.js';
 import { initSearch, resetSearch, MIN_QUERY_LENGTH } from './search.js';
 import { el, searchTerms } from './util.js';
 
 const APP_NAME = 'Our Memories';
+const ACCOUNT_HASH = '#/account';
 const main = document.getElementById('main');
 const searchStatus = document.getElementById('search-status'); // read aloud by screen readers
+const addEventButton = document.getElementById('add-event'); // shown to the admin only
 
 // 'loading' -> 'auth' (signed out) | 'reset' (choosing a new password) | 'app' (signed in)
 let mode = 'loading';
 let recovering = linkType === 'recovery'; // true until a reset link's new password is saved
 let currentUserId = null;
+let currentEmail = '';
+let profile = null; // { displayName, isAdmin } of the signed-in person
 
 let events = [];
 let latestRender = 0;
-let routeEventId = null; // the event chosen in the URL
+let routeEventId = null; // the event chosen in the URL (null on the account page)
 let query = '';
 let scope = 'all'; // 'all' or 'event' (only the event in the URL)
 
 const isSearching = () => query.length >= MIN_QUERY_LENGTH;
+const isAccountRoute = () => location.hash === ACCOUNT_HASH;
 const setState = (state) => { document.body.dataset.state = state; };
 
 // ---------------------------------------------------------------------------
@@ -64,11 +72,11 @@ function showSignedOut() {
   if (mode === 'auth') return;
   mode = 'auth';
   currentUserId = null;
+  profile = null;
   latestRender += 1; // cancel any page still loading
-  query = '';
-  scope = 'all';
+  endSearch();
   events = [];
-  resetSearch();
+  addEventButton.hidden = true;
   setState('signed-out');
   document.title = `Sign in · ${APP_NAME}`;
 
@@ -102,26 +110,29 @@ async function enterApp(session) {
   if (mode === 'app' && currentUserId === session.user.id) return;
   mode = 'app';
   currentUserId = session.user.id;
+  currentEmail = session.user.email ?? '';
   setState('signed-in');
   main.replaceChildren(el('p', { class: 'empty', text: 'Loading…' }));
 
   try {
-    const [profile, loadedEvents] = await Promise.all([getMyProfile(session.user.id), getEvents()]);
+    const [loadedProfile, loadedEvents] = await Promise.all([getMyProfile(session.user.id), getEvents()]);
     if (mode !== 'app') return; // signed out while loading
+    profile = loadedProfile;
     events = loadedEvents;
-    setAccountName(profile.displayName);
   } catch {
     if (mode !== 'app') return;
     main.replaceChildren(renderMessage('Couldn’t load events', 'Check your connection and refresh the page.'));
     return;
   }
 
+  setAccountName(profile.displayName);
+  addEventButton.hidden = !profile.isAdmin;
   initEventFilter(events, onFilterChange);
   render();
 }
 
 // ---------------------------------------------------------------------------
-// Events and search
+// Pages: events, account, search
 // ---------------------------------------------------------------------------
 
 function parseEventId(hash) {
@@ -146,15 +157,17 @@ function resolveEventId() {
 
 async function render({ resetScroll = false, closeMenu = true } = {}) {
   const thisRender = ++latestRender;
-  routeEventId = resolveEventId();
+  const onAccount = isAccountRoute();
+  routeEventId = onAccount ? null : resolveEventId();
   const searching = isSearching();
 
-  renderEventList(events, searching ? null : routeEventId);
+  renderEventList(events, searching || onAccount ? null : routeEventId);
   if (closeMenu) closeDrawer();
   searchStatus.textContent = '';
 
   try {
     if (searching) await showSearch(thisRender);
+    else if (onAccount) showAccount();
     else await showEvent(thisRender);
   } catch {
     if (thisRender !== latestRender) return;
@@ -164,12 +177,32 @@ async function render({ resetScroll = false, closeMenu = true } = {}) {
   if (resetScroll && thisRender === latestRender) window.scrollTo(0, 0);
 }
 
+function showAccount() {
+  document.title = `Account · ${APP_NAME}`;
+  main.replaceChildren(
+    renderAccount({
+      userId: currentUserId,
+      email: currentEmail,
+      displayName: profile.displayName,
+      onDisplayNameSaved: (name) => {
+        profile.displayName = name;
+        setAccountName(name);
+      },
+    }),
+  );
+}
+
 async function showEvent(thisRender) {
   if (!routeEventId) {
     main.replaceChildren(
       events.length
-        ? renderMessage('All events are hidden', 'Open the events list and use Filter events to show some.')
-        : renderMessage('No events yet', 'Events will appear here once the admin adds them.'),
+        ? renderMessage('All events are hidden', 'Open the events list and use the filter to show some.')
+        : renderMessage(
+          'No events yet',
+          profile?.isAdmin
+            ? 'Use the + button next to Events to add the first one.'
+            : 'Events will appear here once the admin adds them.',
+        ),
     );
     return;
   }
@@ -187,6 +220,7 @@ async function showEvent(thisRender) {
   main.replaceChildren(
     renderEventView(event, memories, {
       onAddMemory: () => openMemoryDialog(event, () => render()),
+      onEditEvent: profile?.isAdmin ? () => openEventDialog({ event, onSaved: afterEventSaved }) : null,
     }),
   );
 }
@@ -223,11 +257,27 @@ async function showSearch(thisRender) {
   searchStatus.textContent = `${results.length} ${results.length === 1 ? 'memory' : 'memories'} found`;
 }
 
+// After the admin adds or edits an event: reload the list and show that event.
+async function afterEventSaved(id) {
+  events = await getEvents();
+  initEventFilter(events, onFilterChange);
+  endSearch();
+  const target = eventHash(id);
+  if (location.hash === target) render({ resetScroll: true });
+  else location.hash = target; // the hashchange renders
+}
+
 // The sidebar list updates in place. The main area only needs a redraw when it
 // depends on which events are visible (search results, or the "all hidden" message).
 function onFilterChange() {
-  renderEventList(events, isSearching() ? null : routeEventId);
-  if (isSearching() || !routeEventId) render({ closeMenu: false });
+  renderEventList(events, isSearching() || isAccountRoute() ? null : routeEventId);
+  if (isSearching() || (!routeEventId && !isAccountRoute())) render({ closeMenu: false });
+}
+
+function endSearch() {
+  query = '';
+  scope = 'all';
+  resetSearch();
 }
 
 function onQueryChange(next) {
@@ -242,9 +292,7 @@ function onQueryChange(next) {
 document.addEventListener('click', (event) => {
   const link = event.target.closest('a[href^="#"]');
   if (!link || !query || mode !== 'app') return;
-  query = '';
-  scope = 'all';
-  resetSearch();
+  endSearch();
   // Same hash means no hashchange will fire, so render here. Otherwise hashchange renders.
   if (link.hash === location.hash) render({ resetScroll: true });
 });
@@ -257,8 +305,10 @@ function start() {
   initTheme();
   initDrawer();
   initMemoryDialog();
+  initEventDialog();
   initSearch(onQueryChange);
   initAccountMenu(signOut);
+  addEventButton.addEventListener('click', () => openEventDialog({ onSaved: afterEventSaved }));
   window.addEventListener('hashchange', () => {
     if (mode === 'app') render({ resetScroll: true });
   });
