@@ -1,12 +1,12 @@
 // Main content area: the event header and its memory cards.
 
 import {
-  el, formatDateRange, mapsUrl, locationLabel, highlight, safeUrl, showToast,
+  el, formatDateRange, mapsUrl, locationLabel, highlight, safeUrl,
 } from './util.js';
 import { icon } from './icons.js';
+import { openRequestDialog } from './requestDialog.js';
 
 const DELETED_AUTHOR = '[deleted]';
-const PREVIEW_NOTICE = 'Edit and deletion requests are coming soon.';
 
 /** onEditEvent is only passed for the admin; without it there is no Edit button. */
 export function renderEventView(event, memories, { onAddMemory, onEditEvent }) {
@@ -69,27 +69,27 @@ function renderMemory(memory, terms) {
         memory.authorName
           ? el('span', { class: 'memory-author' }, highlight(memory.authorName, terms))
           : el('span', { class: 'memory-author is-deleted', text: DELETED_AUTHOR }),
-        renderMenu(),
+        renderMenu(memory),
       ),
     ),
   );
 }
 
-// "More options": suggest an edit or request deletion. Wired up with sign-in later.
-function renderMenu() {
+// "More options": suggest an edit or request deletion (the admin reviews both).
+function renderMenu(memory) {
   const menu = el('details', { class: 'menu' });
-  const item = (label) => el('button', {
+  const item = (label, kind) => el('button', {
     type: 'button',
     text: label,
     onclick: () => {
       menu.open = false;
-      showToast(PREVIEW_NOTICE);
+      openRequestDialog(kind, memory);
     },
   });
 
   menu.append(
     el('summary', { class: 'icon-btn', 'aria-label': 'More options' }, icon('more')),
-    el('div', { class: 'menu-list' }, item('Suggest an edit'), item('Request deletion')),
+    el('div', { class: 'menu-list' }, item('Suggest an edit', 'edit'), item('Request deletion', 'delete')),
   );
   return menu;
 }

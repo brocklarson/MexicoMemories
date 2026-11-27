@@ -46,11 +46,13 @@
       </button>
       <details class="menu user-menu" id="user-menu">
         <summary class="icon-btn" aria-label="Account menu">
+          <span class="menu-dot" id="requests-dot" hidden></span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.4 7-5.4s6.2 1.8 7 5.4"/></svg>
         </summary>
         <div class="menu-list">
           <p class="menu-heading" id="user-name"></p>
           <a href="#/account" id="account-link">Account settings</a>
+          <a href="#/requests" id="requests-link" hidden>Review requests <span class="count-badge" id="requests-count"></span></a>
           <button type="button" id="sign-out">Sign out</button>
         </div>
       </details>
@@ -118,7 +120,7 @@
           <input id="event-end" name="end" type="date" required>
         </div>
       </div>
-      
+
       <div class="field">
         <label for="event-family">Family</label>
         <input id="event-family" name="family" type="text" maxlength="200" autocomplete="off">
@@ -144,6 +146,22 @@
       <div class="dialog-actions">
         <button type="button" class="btn ghost" id="event-cancel">Cancel</button>
         <button type="submit" class="btn primary" id="event-submit">Add event</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="request-dialog" aria-labelledby="request-dialog-title">
+    <form id="request-form" class="dialog-form">
+      <h2 id="request-dialog-title"></h2>
+      <p class="dialog-sub">The admin reviews every request. Nothing changes until it is approved.</p>
+      <blockquote class="request-original" id="request-original" hidden></blockquote>
+      <label class="field-label" for="request-text" id="request-label"></label>
+      <textarea id="request-text" name="text"></textarea>
+      <p class="counter" id="request-counter"></p>
+      <p class="form-error" id="request-error" role="alert"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn ghost" id="request-cancel">Cancel</button>
+        <button type="submit" class="btn primary" id="request-submit">Send request</button>
       </div>
     </form>
   </dialog>

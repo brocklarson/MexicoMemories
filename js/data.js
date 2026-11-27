@@ -181,3 +181,81 @@ export async function addMemory({ eventId, text }) {
     throw new Error(error.code === 'P0001' ? error.message : 'Couldn’t add your memory. Try again.');
   }
 }
+
+// ---- Requests: edit suggestions and deletion requests ----
+// Any member can file one. Only the admin can see everyone's and approve or deny them.
+
+export const MAX_REASON_LENGTH = 300; // keep in sync with supabase/04-requests.sql
+
+/**
+ * File a request for a memory. kind is 'edit' (text = the suggested wording) or
+ * 'delete' (text = an optional reason).
+ */
+export async function createRequest({ memoryId, kind, text }) {
+  const trimmed = text.trim();
+  if (kind === 'edit' && !trimmed) throw new Error('Write the text you’d like to see instead.');
+  if (kind === 'edit' && trimmed.length > MAX_MEMORY_LENGTH) {
+    throw new Error(`Memories can be up to ${MAX_MEMORY_LENGTH} characters.`);
+  }
+  if (kind === 'delete' && trimmed.length > MAX_REASON_LENGTH) {
+    throw new Error(`Reasons can be up to ${MAX_REASON_LENGTH} characters.`);
+  }
+
+  const { error } = await supabase.from('requests').insert({
+    memory_id: memoryId,
+    kind,
+    new_text: kind === 'edit' ? trimmed : null,
+    reason: kind === 'delete' ? trimmed || null : null,
+  });
+  if (!error) return;
+  if (error.code === '23505') throw new Error('You already have an open request like this for this memory.');
+  if (error.code === 'P0001') throw new Error(error.message); // e.g. too many open requests
+  if (error.code === '23503') throw new Error('This memory no longer exists.');
+  throw new Error('Couldn’t send your request. Try again.');
+}
+
+/** Open requests, oldest first (admin only; anyone else gets just their own). */
+export async function getPendingRequests() {
+  const rows = unwrap(
+    await supabase
+      .from('requests')
+      .select(`
+        id, kind, new_text, reason, created_at,
+        requester:profiles(display_name),
+        memory:memories(id, body, author:profiles(display_name), event:events(name))
+      `)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true }),
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    kind: row.kind,
+    newText: row.new_text,
+    reason: row.reason,
+    createdAt: row.created_at,
+    requesterName: row.requester?.display_name ?? null,
+    memoryText: row.memory?.body ?? '',
+    memoryAuthor: row.memory?.author?.display_name ?? null,
+    eventName: row.memory?.event?.name ?? '',
+  }));
+}
+
+/** How many requests are waiting for the admin. */
+export async function countPendingRequests() {
+  const { count, error } = await supabase
+    .from('requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending');
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/** Approve (applies the edit or deletes the memory) or deny a request. Admin only. */
+export async function resolveRequest(id, approve) {
+  const { error } = await supabase.rpc('resolve_request', { request_id: id, approve });
+  if (error) {
+    throw new Error(error.code === 'P0001' || error.code === '42501'
+      ? error.message
+      : 'Couldn’t save your decision. Try again.');
+  }
+}

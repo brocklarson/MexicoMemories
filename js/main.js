@@ -4,16 +4,19 @@
 //   signed in           -> the site (events, memories, search, account page)
 //
 // The site uses hash routing because GitHub Pages has no server routing:
-//   #/event/<id>  an event        #/account  the account page
+//   #/event/<id>  an event    #/account  the account page    #/requests  admin review page
 // Search isn't part of the URL. While a search is active it replaces the page;
 // clearing the box (or picking an event) brings the page back.
 
-import { getEvents, getEvent, getMemories, searchMemories, getMyProfile } from './data.js';
+import {
+  getEvents, getEvent, getMemories, searchMemories, getMyProfile, getPendingRequests, countPendingRequests,
+} from './data.js';
 import { isConfigured, linkType, linkError } from './supabase.js';
 import { onAuthChange, getSession, signOut } from './auth.js';
 import { showAuth } from './authView.js';
 import { renderAccount } from './accountView.js';
-import { initAccountMenu, setAccountName } from './accountMenu.js';
+import { renderRequests } from './requestsView.js';
+import { initAccountMenu, setAccountName, setRequestsBadge } from './accountMenu.js';
 import { initTheme } from './theme.js';
 import { initDrawer, closeDrawer, initEventFilter, renderEventList, eventHash } from './sidebar.js';
 import { isHidden } from './hiddenEvents.js';
@@ -21,11 +24,13 @@ import { renderEventView, renderMessage } from './eventView.js';
 import { renderSearchResults } from './searchView.js';
 import { initMemoryDialog, openMemoryDialog } from './memoryDialog.js';
 import { initEventDialog, openEventDialog } from './eventDialog.js';
+import { initRequestDialog } from './requestDialog.js';
 import { initSearch, resetSearch, MIN_QUERY_LENGTH } from './search.js';
 import { el, searchTerms } from './util.js';
 
 const APP_NAME = 'Mexico Memories';
 const ACCOUNT_HASH = '#/account';
+const REQUESTS_HASH = '#/requests';
 const main = document.getElementById('main');
 const searchStatus = document.getElementById('search-status'); // read aloud by screen readers
 const addEventButton = document.getElementById('add-event'); // shown to the admin only
@@ -44,7 +49,8 @@ let query = '';
 let scope = 'all'; // 'all' or 'event' (only the event in the URL)
 
 const isSearching = () => query.length >= MIN_QUERY_LENGTH;
-const isAccountRoute = () => location.hash === ACCOUNT_HASH;
+// A page that isn't an event: 'account', 'requests', or null.
+const currentPage = () => ({ [ACCOUNT_HASH]: 'account', [REQUESTS_HASH]: 'requests' })[location.hash] ?? null;
 const setState = (state) => { document.body.dataset.state = state; };
 
 // ---------------------------------------------------------------------------
@@ -77,6 +83,7 @@ function showSignedOut() {
   endSearch();
   events = [];
   addEventButton.hidden = true;
+  setRequestsBadge({ isAdmin: false, count: 0 });
   setState('signed-out');
   document.title = `Sign in · ${APP_NAME}`;
 
@@ -129,6 +136,7 @@ async function enterApp(session) {
   addEventButton.hidden = !profile.isAdmin;
   initEventFilter(events, onFilterChange);
   render();
+  refreshRequestsBadge();
 }
 
 // ---------------------------------------------------------------------------
@@ -157,17 +165,18 @@ function resolveEventId() {
 
 async function render({ resetScroll = false, closeMenu = true } = {}) {
   const thisRender = ++latestRender;
-  const onAccount = isAccountRoute();
-  routeEventId = onAccount ? null : resolveEventId();
+  const page = currentPage();
+  routeEventId = page ? null : resolveEventId();
   const searching = isSearching();
 
-  renderEventList(events, searching || onAccount ? null : routeEventId);
+  renderEventList(events, searching || page ? null : routeEventId);
   if (closeMenu) closeDrawer();
   searchStatus.textContent = '';
 
   try {
     if (searching) await showSearch(thisRender);
-    else if (onAccount) showAccount();
+    else if (page === 'account') showAccount();
+    else if (page === 'requests') await showRequests(thisRender);
     else await showEvent(thisRender);
   } catch {
     if (thisRender !== latestRender) return;
@@ -190,6 +199,29 @@ function showAccount() {
       },
     }),
   );
+}
+
+async function showRequests(thisRender) {
+  document.title = `Requests · ${APP_NAME}`;
+  if (!profile?.isAdmin) {
+    main.replaceChildren(renderMessage('Admin only', 'Only the admin can review requests.'));
+    return;
+  }
+  const requests = await getPendingRequests();
+  if (thisRender !== latestRender) return;
+  setRequestsBadge({ isAdmin: true, count: requests.length });
+  main.replaceChildren(
+    renderRequests(requests, { onCountChange: (count) => setRequestsBadge({ isAdmin: true, count }) }),
+  );
+}
+
+// Admin only: show how many requests are waiting. A failure just leaves the count out.
+async function refreshRequestsBadge() {
+  if (!profile?.isAdmin) return;
+  try {
+    const count = await countPendingRequests();
+    if (mode === 'app') setRequestsBadge({ isAdmin: true, count });
+  } catch { /* the review page itself will show an error if the problem persists */ }
 }
 
 async function showEvent(thisRender) {
@@ -270,8 +302,8 @@ async function afterEventSaved(id) {
 // The sidebar list updates in place. The main area only needs a redraw when it
 // depends on which events are visible (search results, or the "all hidden" message).
 function onFilterChange() {
-  renderEventList(events, isSearching() || isAccountRoute() ? null : routeEventId);
-  if (isSearching() || (!routeEventId && !isAccountRoute())) render({ closeMenu: false });
+  renderEventList(events, isSearching() || currentPage() ? null : routeEventId);
+  if (isSearching() || (!routeEventId && !currentPage())) render({ closeMenu: false });
 }
 
 function endSearch() {
@@ -306,6 +338,7 @@ function start() {
   initDrawer();
   initMemoryDialog();
   initEventDialog();
+  initRequestDialog();
   initSearch(onQueryChange);
   initAccountMenu(signOut);
   addEventButton.addEventListener('click', () => openEventDialog({ onSaved: afterEventSaved }));
