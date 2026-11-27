@@ -12,6 +12,7 @@
   --accent-ink: #ffffff;
   --accent-soft: #dcefec;
   --mark: #bfe6e0;
+  --danger: #b3261e;
 
   --font-ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-text: "Newsreader", Georgia, "Times New Roman", serif;
@@ -32,6 +33,7 @@
   --accent-ink: #07201f;
   --accent-soft: #16393a;
   --mark: #1f5c59;
+  --danger: #ff9a92;
 }
 
 /* ==========================================================================
@@ -56,6 +58,9 @@ ul { padding: 0; list-style: none; }
 a { color: inherit; }
 button, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
+
+/* Without this, a class that sets `display` (like .icon-btn) would override the hidden attribute. */
+[hidden] { display: none !important; }
 
 :focus-visible {
   outline: 2px solid var(--accent);
@@ -537,36 +542,47 @@ mark {
 /* ==========================================================================
    Event filter (sidebar)
    ========================================================================== */
-.filter { margin-bottom: 0.75rem; }
-
-.filter summary {
+/* "Events" heading with a small filter button at its right edge. */
+.sidebar-head {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 0.625rem;
-  font-weight: 500;
-  list-style: none;
-  cursor: pointer;
+  justify-content: space-between;
+  padding-bottom: 0.25rem;
 }
-.filter summary::-webkit-details-marker { display: none; }
-.filter summary:hover { background: var(--accent-soft); }
+.sidebar-head .sidebar-title { padding-bottom: 0; }
 
-.filter summary::after {
-  content: "";
-  width: 0.5rem;
-  height: 0.5rem;
-  margin: 0 0.25rem 0.25rem 0;
-  border-right: 2px solid var(--muted);
-  border-bottom: 2px solid var(--muted);
-  transform: rotate(45deg);
+.filter-toggle {
+  position: relative;
+  width: 2rem;
+  height: 2rem;
+  color: var(--muted);
 }
-.filter[open] summary::after { margin: 0.25rem 0.25rem 0 0; transform: rotate(-135deg); }
+.filter-toggle svg { width: 1.125rem; height: 1.125rem; }
+.filter-toggle[aria-expanded="true"] { background: var(--accent-soft); color: var(--ink); }
 
-.filter-status { margin-left: auto; font-size: 0.8125rem; font-weight: 400; color: var(--muted); }
+/* Count of hidden events, shown only when something is hidden. */
+.filter-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  background: var(--accent);
+  border-radius: 0.5rem;
+  color: var(--accent-ink);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1rem;
+  text-align: center;
+}
 
-.filter-body { padding: 0.5rem 0.25rem 0; }
+.filter {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.25rem 0.25rem;
+  border-bottom: 1px solid var(--line);
+}
+.filter-help { padding: 0 0.5rem 0.25rem; font-size: 0.8125rem; color: var(--muted); }
 
 .filter-item {
   display: flex;
@@ -594,6 +610,72 @@ mark {
 .event-list-empty { padding: 0.5rem 0.75rem; font-size: 0.9375rem; color: var(--muted); }
 
 .results-note { flex-basis: 100%; font-size: 0.9375rem; color: var(--muted); }
+
+/* ==========================================================================
+   Signed-out screens + account menu
+   ========================================================================== */
+
+/* Until someone is signed in, show only the header and the sign-in card. */
+body:not([data-state="signed-in"]) :is(.sidebar, .scrim, .search, .menu-btn, #search-open, .user-menu) {
+  display: none;
+}
+body:not([data-state="signed-in"]) .layout { grid-template-columns: minmax(0, 1fr); }
+
+.menu-heading {
+  margin-bottom: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.auth {
+  width: min(26rem, 100%);
+  margin: clamp(0.5rem, 4vw, 3rem) auto 0;
+  padding: clamp(1.25rem, 5vw, 2rem);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+}
+
+.auth-title {
+  margin-bottom: 1.25rem;
+  font-family: var(--font-text);
+  font-size: 1.75rem;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.auth-form { display: grid; gap: 1rem; }
+.auth-form .btn { justify-content: center; width: 100%; }
+
+.field { display: grid; gap: 0.375rem; }
+.field label { font-weight: 500; }
+.field-hint { font-size: 0.8125rem; color: var(--muted); }
+
+.field input {
+  width: 100%;
+  height: 2.75rem;
+  padding: 0 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 0.625rem;
+  font: inherit;
+}
+.field input:focus-visible { border-color: var(--accent); outline-offset: 1px; }
+
+.form-notice {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--accent-soft);
+  border-radius: 0.625rem;
+}
+
+.form-error { color: var(--danger); overflow-wrap: anywhere; }
+.form-error:empty { display: none; }
+
+.auth-switch { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 1.25rem; }
+.auth-switch .link-btn { margin: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }

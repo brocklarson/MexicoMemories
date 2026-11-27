@@ -7,7 +7,8 @@ const list = document.getElementById('event-list');
 const sidebar = document.getElementById('sidebar');
 const menuButton = document.getElementById('menu-btn');
 const scrim = document.getElementById('scrim');
-const filter = document.getElementById('event-filter');
+const filter = document.getElementById('event-filter'); // the checkbox panel
+const filterToggle = document.getElementById('filter-toggle'); // small button beside "Events"
 const filterList = document.getElementById('filter-list');
 const filterStatus = document.getElementById('filter-status');
 const filterReset = document.getElementById('filter-reset');
@@ -46,11 +47,17 @@ export function renderEventList(events, activeId) {
 }
 
 /**
- * The "Filter events" panel: one checkbox per event (checked = shown).
- * Built once so focus isn't lost while ticking boxes; onChange() runs after every change.
+ * The filter: a small button beside "Events" opens a panel with one checkbox per event
+ * (checked = shown). Built once so focus isn't lost while ticking boxes;
+ * onChange() runs after every change.
  */
 export function initEventFilter(events, onChange) {
+  setFilterOpen(false);
+  filterToggle.hidden = events.length < 2;
   if (events.length < 2) return; // nothing worth filtering
+
+  // Assigned (not added) so signing out and back in doesn't stack up handlers.
+  filterToggle.onclick = () => setFilterOpen(filter.hidden);
 
   filterList.replaceChildren(
     ...events.map((event) =>
@@ -71,20 +78,28 @@ export function initEventFilter(events, onChange) {
     ),
   );
 
-  filterReset.addEventListener('click', () => {
+  // Assigned (not added) so signing out and back in doesn't stack up handlers.
+  filterReset.onclick = () => {
     showAll();
     for (const box of filterList.querySelectorAll('input')) box.checked = true;
     syncFilterStatus(events);
     onChange();
-  });
+  };
 
-  filter.hidden = false;
   syncFilterStatus(events);
 }
 
+function setFilterOpen(open) {
+  filter.hidden = !open;
+  filterToggle.setAttribute('aria-expanded', String(open));
+}
+
+// The badge on the button shows how many events are hidden.
 function syncFilterStatus(events) {
   const count = hiddenCount(events);
-  filterStatus.textContent = count ? `${count} hidden` : '';
+  filterStatus.textContent = String(count);
+  filterStatus.hidden = count === 0;
+  filterToggle.setAttribute('aria-label', count ? `Filter events (${count} hidden)` : 'Filter events');
   filterReset.hidden = count === 0;
 }
 

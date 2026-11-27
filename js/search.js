@@ -17,7 +17,7 @@ let timer;
 export function initSearch(onQuery) {
   input.addEventListener('input', () => {
     clearTimeout(timer);
-    timer = setTimeout(() => onQuery(input.value.trim()), 150);
+    timer = setTimeout(() => onQuery(input.value.trim()), 300); // searching now asks the server
   });
 
   form.addEventListener('submit', (event) => {

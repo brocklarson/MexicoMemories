@@ -6,7 +6,7 @@ import {
 import { icon } from './icons.js';
 
 const DELETED_AUTHOR = '[deleted]';
-const PREVIEW_NOTICE = 'Sign-in isn’t set up yet, so this is a preview.';
+const PREVIEW_NOTICE = 'Edit and deletion requests are coming soon.';
 
 export function renderEventView(event, memories, { onAddMemory }) {
   return el('article', { class: 'event' },
