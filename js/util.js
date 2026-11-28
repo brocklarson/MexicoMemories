@@ -24,17 +24,9 @@ export function el(tag, props = {}, ...children) {
   return node;
 }
 
-// Event dates are plain calendar dates ("2026-06-13"), so format them in UTC
-// to keep them from shifting a day in some time zones.
-const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeZone: 'UTC' });
-
-export function formatDate(isoDate) {
-  return dateFormat.format(new Date(isoDate));
-}
-
-export function formatDateRange(start, end) {
-  if (!end || end === start) return formatDate(start);
-  return dateFormat.formatRange(new Date(start), new Date(end));
+/** "1 memory", "10 memories". */
+export function memoryCountLabel(count) {
+  return `${count} ${count === 1 ? 'memory' : 'memories'}`;
 }
 
 // Opens Google Maps with a pin at the coordinates. Returns null if they're missing.

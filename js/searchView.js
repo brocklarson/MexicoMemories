@@ -1,6 +1,6 @@
 // Search results in the main area: matching memories grouped by event.
 
-import { el, formatDateRange } from './util.js';
+import { el } from './util.js';
 import { renderMemoryGrid } from './eventView.js';
 import { eventHash } from './sidebar.js';
 
@@ -67,7 +67,6 @@ function renderResults(results, events, terms, scope) {
       el('section', { class: 'result-group' },
         el('h2', { class: 'result-group-title' },
           el('a', { href: eventHash(event.id), text: event.name }),
-          el('span', { class: 'result-group-dates', text: formatDateRange(event.startDate, event.endDate) }),
         ),
         renderMemoryGrid(byEvent.get(event.id), terms),
       ),

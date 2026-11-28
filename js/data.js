@@ -2,39 +2,38 @@
 // site asks for events and memories through these functions.
 //
 // Shapes returned to the rest of the site:
-//   Event  { id, name, startDate, endDate, albumUrl|null, location: { label|null, lat, lng } | null }
+//   Event  { id, name, family|null, memoryCount, albumUrl|null, location: { label|null, lat, lng } | null }
 //          label is null for a dropped pin with no place name; the UI shows coordinates instead.
 //   Memory { id, eventId, authorName|null, createdAt, text }
 //          authorName is null when the author's account was deleted.
 //
 // The database enforces the real rules (who can read or write, length and count limits).
 // The checks here only give friendlier messages before a request is sent.
-
+ 
 import { supabase } from './supabase.js';
 import { slugify } from './util.js';
-
+ 
 export const MAX_MEMORY_LENGTH = 1000; // keep in sync with supabase/01-schema.sql
-
-const EVENT_COLUMNS = 'id, name, family, start_date, end_date, album_url, location_label, lat, lng';
+ 
+const EVENT_COLUMNS = 'id, name, family, album_url, location_label, lat, lng, memories(count)';
 const MEMORY_COLUMNS = 'id, event_id, body, created_at, author:profiles(display_name)';
-
+ 
 function unwrap({ data, error }) {
   if (error) throw error;
   return data;
 }
-
+ 
 function toEvent(row) {
   return {
     id: row.id,
     name: row.name,
     family: row.family,
-    startDate: row.start_date,
-    endDate: row.end_date,
+    memoryCount: row.memories?.[0]?.count ?? 0,
     albumUrl: row.album_url,
     location: row.lat == null ? null : { label: row.location_label, lat: row.lat, lng: row.lng },
   };
 }
-
+ 
 function toMemory(row) {
   return {
     id: row.id,
@@ -44,7 +43,7 @@ function toMemory(row) {
     text: row.body,
   };
 }
-
+ 
 /** The signed-in person's profile: { displayName, isAdmin }. */
 export async function getMyProfile(userId) {
   const row = unwrap(
@@ -52,7 +51,7 @@ export async function getMyProfile(userId) {
   );
   return { displayName: row.display_name, isAdmin: row.is_admin };
 }
-
+ 
 /**
  * Change your own display name. Memories show the author's current name, so every
  * memory you've added updates too. Returns the saved name.
@@ -61,7 +60,7 @@ export async function updateMyDisplayName(userId, name) {
   const trimmed = name.trim();
   if (!trimmed) throw new Error('Enter a display name.');
   if (trimmed.length > 40) throw new Error('Display names can be up to 40 characters.');
-
+ 
   const { data, error } = await supabase
     .from('profiles')
     .update({ display_name: trimmed })
@@ -70,49 +69,48 @@ export async function updateMyDisplayName(userId, name) {
   if (error || !data?.length) throw new Error('Couldn’t update your display name. Try again.');
   return data[0].display_name;
 }
-
-/** All events, newest first. */
+ 
+/** All events, sorted by name from Z to A (so "2026 …" comes before "2025 …"). */
 export async function getEvents() {
   const rows = unwrap(
-    await supabase.from('events').select(EVENT_COLUMNS).order('start_date', { ascending: false }),
+    await supabase.from('events').select(EVENT_COLUMNS),
   );
-  return rows.map(toEvent);
+  // numeric: so "2026" sorts as a number, not letter by letter.
+  return rows.map(toEvent).sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }));
 }
-
+ 
 /** One event by id, or null if it doesn't exist. */
 export async function getEvent(id) {
   const row = unwrap(await supabase.from('events').select(EVENT_COLUMNS).eq('id', id).maybeSingle());
   return row ? toEvent(row) : null;
 }
-
+ 
 // ---- Events (only the admin can change these; the database enforces it) ----
-
-// `fields` is { name, family|null, startDate, endDate, albumUrl|null, location: { label|null, lat, lng } | null }
+ 
+// `fields` is { name, family|null, albumUrl|null, location: { label|null, lat, lng } | null }
 function eventRow(fields) {
   return {
     name: fields.name,
     family: fields.family,
-    start_date: fields.startDate,
-    end_date: fields.endDate,
     album_url: fields.albumUrl,
     location_label: fields.location?.label ?? null,
     lat: fields.location?.lat ?? null,
     lng: fields.location?.lng ?? null,
   };
 }
-
+ 
 function eventError(error) {
   if (error.code === '42501') return new Error('Only the admin can add or edit events.');
   if (error.code === '23505') return new Error('An event with this name already exists.');
-  if (error.code === '23514') return new Error('Check the name, dates, link and coordinates, then try again.');
+  if (error.code === '23514') return new Error('Check the name, link and coordinates, then try again.');
   return new Error('Couldn’t save the event. Try again.');
 }
-
+ 
 /** Add an event. Its page address comes from the name. Returns the new event's id. */
 export async function createEvent(fields) {
   const base = slugify(fields.name);
   if (!base) throw new Error('Use some letters or numbers in the event name.');
-
+ 
   for (let attempt = 1; attempt <= 5; attempt += 1) {
     const id = attempt === 1 ? base : `${base}-${attempt}`;
     const { error } = await supabase.from('events').insert({ id, ...eventRow(fields) });
@@ -122,7 +120,7 @@ export async function createEvent(fields) {
   }
   throw new Error('Couldn’t find a free page address for this event. Try a different name.');
 }
-
+ 
 /** Save changes to an event. The id (page address) never changes. Returns the id. */
 export async function updateEvent(id, fields) {
   const { data, error } = await supabase
@@ -135,7 +133,7 @@ export async function updateEvent(id, fields) {
   if (!data.length) throw new Error('Only the admin can add or edit events.');
   return id;
 }
-
+ 
 /** Memories for an event, newest first. */
 export async function getMemories(eventId) {
   const rows = unwrap(
@@ -147,7 +145,7 @@ export async function getMemories(eventId) {
   );
   return rows.map(toMemory);
 }
-
+ 
 /**
  * Search memory text and author names, newest first. Every word in `query` must appear.
  * Pass `eventId` to search one event; omit it to search all events.
@@ -165,7 +163,7 @@ export async function searchMemories({ query, eventId = null }) {
     text: row.body,
   }));
 }
-
+ 
 /** Add a memory as the signed-in person. Throws an Error with a friendly message. */
 export async function addMemory({ eventId, text }) {
   const trimmed = text.trim();
@@ -173,7 +171,7 @@ export async function addMemory({ eventId, text }) {
   if (trimmed.length > MAX_MEMORY_LENGTH) {
     throw new Error(`Memories can be up to ${MAX_MEMORY_LENGTH} characters.`);
   }
-
+ 
   // author_id fills in automatically from the signed-in user.
   const { error } = await supabase.from('memories').insert({ event_id: eventId, body: trimmed });
   if (error) {
@@ -181,12 +179,12 @@ export async function addMemory({ eventId, text }) {
     throw new Error(error.code === 'P0001' ? error.message : 'Couldn’t add your memory. Try again.');
   }
 }
-
+ 
 // ---- Requests: edit suggestions and deletion requests ----
 // Any member can file one. Only the admin can see everyone's and approve or deny them.
-
+ 
 export const MAX_REASON_LENGTH = 300; // keep in sync with supabase/04-requests.sql
-
+ 
 /**
  * File a request for a memory. kind is 'edit' (text = the suggested wording) or
  * 'delete' (text = an optional reason).
@@ -200,7 +198,7 @@ export async function createRequest({ memoryId, kind, text }) {
   if (kind === 'delete' && trimmed.length > MAX_REASON_LENGTH) {
     throw new Error(`Reasons can be up to ${MAX_REASON_LENGTH} characters.`);
   }
-
+ 
   const { error } = await supabase.from('requests').insert({
     memory_id: memoryId,
     kind,
@@ -213,7 +211,7 @@ export async function createRequest({ memoryId, kind, text }) {
   if (error.code === '23503') throw new Error('This memory no longer exists.');
   throw new Error('Couldn’t send your request. Try again.');
 }
-
+ 
 /** Open requests, oldest first (admin only; anyone else gets just their own). */
 export async function getPendingRequests() {
   const rows = unwrap(
@@ -239,7 +237,7 @@ export async function getPendingRequests() {
     eventName: row.memory?.event?.name ?? '',
   }));
 }
-
+ 
 /** How many requests are waiting for the admin. */
 export async function countPendingRequests() {
   const { count, error } = await supabase
@@ -249,7 +247,7 @@ export async function countPendingRequests() {
   if (error) throw error;
   return count ?? 0;
 }
-
+ 
 /** Approve (applies the edit or deletes the memory) or deny a request. Admin only. */
 export async function resolveRequest(id, approve) {
   const { error } = await supabase.rpc('resolve_request', { request_id: id, approve });
@@ -259,3 +257,4 @@ export async function resolveRequest(id, approve) {
       : 'Couldn’t save your decision. Try again.');
   }
 }
+ 

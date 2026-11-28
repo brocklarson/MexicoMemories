@@ -1,6 +1,6 @@
 // Event list in the sidebar, plus the slide-out drawer behavior on small screens.
 
-import { el, formatDateRange } from './util.js';
+import { el, memoryCountLabel } from './util.js';
 import { isHidden, setHidden, showAll, hiddenCount } from './hiddenEvents.js';
 
 const list = document.getElementById('event-list');
@@ -40,7 +40,7 @@ export function renderEventList(events, activeId) {
         },
           el('span', { class: 'event-link-name', text: event.name }),
           event.family && el('span', { class: 'event-link-family', text: event.family }),
-          el('span', { class: 'event-link-date', text: formatDateRange(event.startDate, event.endDate) }),
+          el('span', { class: 'event-link-count', text: memoryCountLabel(event.memoryCount) }),
         ),
       ),
     ),

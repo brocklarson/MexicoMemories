@@ -8,8 +8,6 @@ const form = document.getElementById('event-form');
 const title = document.getElementById('event-dialog-title');
 const nameInput = document.getElementById('event-name');
 const family = document.getElementById('event-family');
-const start = document.getElementById('event-start');
-const end = document.getElementById('event-end');
 const album = document.getElementById('event-album');
 const coords = document.getElementById('event-coords');
 const place = document.getElementById('event-place');
@@ -22,11 +20,6 @@ let current = null; // { event, onSaved } while the dialog is open. event is nul
 export function initEventDialog() {
   cancel.addEventListener('click', () => dialog.close());
   form.addEventListener('submit', handleSubmit);
-
-  // Keep the end date from falling before the start date.
-  start.addEventListener('change', () => {
-    if (!end.value || end.value < start.value) end.value = start.value;
-  });
 }
 
 /**
@@ -43,8 +36,6 @@ export function openEventDialog({ event = null, onSaved }) {
   if (event) {
     nameInput.value = event.name;
     family.value = event.family ?? '';
-    start.value = event.startDate;
-    end.value = event.endDate;
     album.value = event.albumUrl ?? '';
     coords.value = event.location ? `${event.location.lat}, ${event.location.lng}` : '';
     place.value = event.location?.label ?? '';
@@ -56,8 +47,6 @@ export function openEventDialog({ event = null, onSaved }) {
 
 // Reads and checks the form. Throws an Error with a message the admin can act on.
 function readFields() {
-  if (end.value < start.value) throw new Error('The end date can’t be before the start date.');
-
   const coordsText = coords.value.trim();
   const label = place.value.trim();
   let location = null;
@@ -72,8 +61,6 @@ function readFields() {
   return {
     name: nameInput.value.trim(),
     family: family.value.trim() || null,
-    startDate: start.value,
-    endDate: end.value,
     albumUrl: album.value.trim() || null,
     location,
   };

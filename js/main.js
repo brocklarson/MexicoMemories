@@ -169,7 +169,7 @@ async function render({ resetScroll = false, closeMenu = true } = {}) {
   routeEventId = page ? null : resolveEventId();
   const searching = isSearching();
 
-  renderEventList(events, searching || page ? null : routeEventId);
+  drawSidebar();
   if (closeMenu) closeDrawer();
   searchStatus.textContent = '';
 
@@ -211,8 +211,24 @@ async function showRequests(thisRender) {
   if (thisRender !== latestRender) return;
   setRequestsBadge({ isAdmin: true, count: requests.length });
   main.replaceChildren(
-    renderRequests(requests, { onCountChange: (count) => setRequestsBadge({ isAdmin: true, count }) }),
+    renderRequests(requests, { onCountChange: onRequestsChange }),
   );
+}
+
+// An approved deletion changes the sidebar's memory counts, so refresh them too.
+function onRequestsChange(count) {
+  setRequestsBadge({ isAdmin: true, count });
+  reloadEvents().catch(() => {}); // counts just stay as they were if this fails
+}
+
+// The sidebar highlights the open event, except on search results and the other pages.
+function drawSidebar() {
+  renderEventList(events, isSearching() || currentPage() ? null : routeEventId);
+}
+
+async function reloadEvents() {
+  events = await getEvents();
+  if (mode === 'app') drawSidebar();
 }
 
 // Admin only: show how many requests are waiting. A failure just leaves the count out.
@@ -251,7 +267,10 @@ async function showEvent(thisRender) {
   document.title = `${event.name} · ${APP_NAME}`;
   main.replaceChildren(
     renderEventView(event, memories, {
-      onAddMemory: () => openMemoryDialog(event, () => render()),
+      onAddMemory: () => openMemoryDialog(event, async () => {
+        await reloadEvents(); // the sidebar's memory counts
+        render();
+      }),
       onEditEvent: profile?.isAdmin ? () => openEventDialog({ event, onSaved: afterEventSaved }) : null,
     }),
   );
@@ -302,7 +321,7 @@ async function afterEventSaved(id) {
 // The sidebar list updates in place. The main area only needs a redraw when it
 // depends on which events are visible (search results, or the "all hidden" message).
 function onFilterChange() {
-  renderEventList(events, isSearching() || currentPage() ? null : routeEventId);
+  drawSidebar();
   if (isSearching() || (!routeEventId && !currentPage())) render({ closeMenu: false });
 }
 

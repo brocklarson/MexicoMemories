@@ -184,7 +184,7 @@ main:focus { outline: none; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.event-link-date { display: block; margin-top: 0.125rem; font-size: 0.8125rem; color: var(--muted); }
+.event-link-count { display: block; margin-top: 0.125rem; font-size: 0.8125rem; color: var(--muted); }
 
 .menu-btn { display: none; }
 .scrim { display: none; }
@@ -257,12 +257,6 @@ main:focus { outline: none; }
   line-height: 1.35;
   color: var(--ink);
   opacity: 0.78;
-}
-
-.event-dates {
-  margin-top: 0.75rem;
-  font-size: 1.0625rem;
-  color: var(--muted);
 }
 
 .event-links {
@@ -546,7 +540,6 @@ mark {
 }
 .result-group-title a { text-decoration: none; }
 .result-group-title a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
-.result-group-dates { font-size: 0.9375rem; font-weight: 400; color: var(--muted); }
 
 @media (max-width: 52rem) {
   .search { display: none; margin-left: 0; }
@@ -746,7 +739,6 @@ body:not([data-state="signed-in"]) .layout { grid-template-columns: minmax(0, 1f
 
 /* Add / edit event dialog */
 .event-form { display: grid; gap: 1rem; }
-.field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 1rem; }
 .event-form .dialog-actions { margin-top: 0; }
 
 @media (prefers-reduced-motion: reduce) {

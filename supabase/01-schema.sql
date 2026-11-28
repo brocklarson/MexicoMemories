@@ -23,14 +23,11 @@ create table public.events (
   id             text primary key check (id ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
   name           text not null check (char_length(btrim(name)) between 1 and 100),
   family         text check (char_length(family) <= 200),
-  start_date     date not null,
-  end_date       date not null,
   album_url      text check (album_url is null or album_url ~* '^https?://'),
   location_label text check (char_length(location_label) <= 100),
   lat            double precision check (lat between -90 and 90),
   lng            double precision check (lng between -180 and 180),
   created_at     timestamptz not null default now(),
-  check (end_date >= start_date),
   check ((lat is null) = (lng is null))  -- a pin needs both coordinates
 );
 create unique index events_name_unique on public.events (lower(name));

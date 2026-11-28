@@ -1,7 +1,7 @@
 // Main content area: the event header and its memory cards.
 
 import {
-  el, formatDateRange, mapsUrl, locationLabel, highlight, safeUrl,
+  el, mapsUrl, locationLabel, highlight, safeUrl,
 } from './util.js';
 import { icon } from './icons.js';
 import { openRequestDialog } from './requestDialog.js';
@@ -32,7 +32,6 @@ function renderHeader(event, onEditEvent) {
       onEditEvent && el('button', { type: 'button', class: 'btn ghost', onclick: onEditEvent }, icon('edit'), 'Edit event'),
     ),
     event.family && el('p', { class: 'event-family', text: event.family }),
-    el('p', { class: 'event-dates', text: formatDateRange(event.startDate, event.endDate) }),
     el('ul', { class: 'event-links' },
       mapHref && el('li', {}, externalLink(mapHref, 'pin', locationLabel(event.location))),
       albumUrl && el('li', {}, externalLink(albumUrl, 'photos', 'Photo album')),
