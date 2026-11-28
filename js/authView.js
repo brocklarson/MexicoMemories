@@ -65,12 +65,14 @@ function signUpForm({ go }) {
       type: 'password', autocomplete: 'new-password', required: true, minlength: 8,
       hint: 'At least 8 characters.',
     }),
+    field('confirm', 'Confirm password', { type: 'password', autocomplete: 'new-password', required: true }),
     field('invite_code', 'Invite code', {
       type: 'text', autocomplete: 'off', required: true,
       hint: 'Ask whoever shared this site with you.',
     }),
   );
   onSubmit(form, async (data) => {
+    if (data.get('password') !== data.get('confirm')) throw new Error('The two passwords don’t match.');
     const { needsConfirmation } = await signUp({
       displayName: data.get('display_name').trim(),
       email: data.get('email').trim(),
@@ -88,7 +90,7 @@ function forgotForm({ go }) {
   );
   onSubmit(form, async (data) => {
     await requestPasswordReset(data.get('email').trim());
-    go('signin', 'If an account exists for that email, we sent a link to reset the password.');
+    go('signin', 'If an account exists for that email, we sent a link to reset the password. It can take a minute, and may land in your junk or spam folder.');
   });
   return withLinks(form, linkButton('Back to sign in', () => go('signin')));
 }

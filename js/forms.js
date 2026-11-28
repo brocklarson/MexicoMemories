@@ -2,13 +2,35 @@
 
 import { el } from './util.js';
 
-/** A labelled input. `id` defaults to auth-<name>; `hint` is small help text under it. */
+/**
+ * A labelled input. `id` defaults to auth-<name>; `hint` is small help text under it.
+ * Password inputs get a Show/Hide button.
+ */
 export function field(name, label, { id = `auth-${name}`, hint, ...attrs }) {
+  const input = el('input', { id, name, ...attrs });
   return el('div', { class: 'field' },
     el('label', { for: id, text: label }),
-    el('input', { id, name, ...attrs }),
+    attrs.type === 'password' ? withVisibilityToggle(input) : input,
     hint && el('p', { class: 'field-hint', text: hint }),
   );
+}
+
+function withVisibilityToggle(input) {
+  const toggle = el('button', {
+    type: 'button',
+    class: 'password-toggle',
+    text: 'Show',
+    'aria-pressed': 'false',
+    'aria-label': 'Show password',
+    onclick: () => {
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      toggle.textContent = show ? 'Hide' : 'Show';
+      toggle.setAttribute('aria-pressed', String(show));
+      toggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    },
+  });
+  return el('div', { class: 'password-wrap' }, input, toggle);
 }
 
 /** A form with the given fields, an error line, and a submit button. */
